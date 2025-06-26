@@ -5,13 +5,12 @@ namespace Cyl.StateMachines
 {
     public abstract class State
     {
-        public string Name { get; private set; }
+        public abstract string Name { get; }
         
         public StateMachine StateMachine { get; private set; }
 
-        public virtual void Initialize(string name, StateMachine stateMachine)
+        public virtual void Initialize(StateMachine stateMachine)
         {
-            Name = name;
             StateMachine = stateMachine;
         }
         
@@ -44,6 +43,9 @@ namespace Cyl.StateMachines
     {
         private readonly Dictionary<string, State> _states = new();
         private readonly Dictionary<string, List<TransitionEvent>> _transitions = new();
+        private string _initialStateName;
+        
+        public string InitialStateName { get; set; }
         
         public State CurrentState { get; private set; }
         
@@ -79,18 +81,24 @@ namespace Cyl.StateMachines
             CurrentState.OnEnter();
         }
         
-        public bool RegisterState(string stateName, State state)
+        public bool RegisterState(State state)
         {
+            var stateName = state.Name;
             if (_states.ContainsKey(stateName))
                 return false;
             
-            state.Initialize(stateName, this);
+            state.Initialize(this);
             _states[stateName] = state;
             
             return true;
         }
         
-        public bool RegisterTransition(string fromState, string toState, string eventName)
+        public bool RegisterTransition(State fromState, State toState, string eventName = TransitionEvent.Finished)
+        {
+            return RegisterTransition(fromState.Name, toState.Name, eventName);
+        }
+        
+        public bool RegisterTransition(string fromState, string toState, string eventName = TransitionEvent.Finished)
         {
             if (!_states.ContainsKey(fromState) || !_states.ContainsKey(toState))
                 return false;
@@ -104,6 +112,12 @@ namespace Cyl.StateMachines
             
             transitionList.Add(transitionEvent);
             return true;
+        }
+        
+        public void Begin()
+        {
+            if (CurrentState == null)
+                ChangeState(InitialStateName);
         }
 
         public void FireTransitionEvent(string eventName)
