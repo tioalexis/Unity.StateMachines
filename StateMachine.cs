@@ -4,6 +4,12 @@ using UnityEngine;
 namespace Cyl.StateMachines
 {
     /// <summary>
+    /// Marker interface for state change parameters.
+    /// This allows passing additional data when changing states.
+    /// </summary>
+    public interface IStateChangeParams { }
+        
+    /// <summary>
     /// The base class for all states in the state machine.
     /// Each state should inherit from this class and implement the required methods.
     /// Only one state of each name can exist in the state machine.
@@ -32,7 +38,7 @@ namespace Cyl.StateMachines
         /// <summary>
         /// Invoked when the state is entered.
         /// </summary>
-        public abstract void OnEnter();
+        public abstract void OnEnter(IStateChangeParams stateChangeParams);
         
         /// <summary>
         /// Invoked every frame while the state is active.
@@ -209,7 +215,8 @@ namespace Cyl.StateMachines
         /// does nothing and logs an error.
         /// </summary>
         /// <param name="eventName">The name of the event that triggers the transition.</param>
-        public void FireTransitionEvent(string eventName)
+        /// <param name="stateChangeParams">Additional parameters to pass to the state when transitioning.</param>
+        public void FireTransitionEvent(string eventName, IStateChangeParams stateChangeParams = null)
         {
             if (CurrentState == null)
             {
@@ -229,14 +236,14 @@ namespace Cyl.StateMachines
                 if (transition.EventName != eventName) 
                     continue;
                 
-                ChangeState(transition.ToState);
+                ChangeState(transition.ToState, stateChangeParams);
                 return;
             }
             
             Debug.LogError($"No transition found for event '{eventName}' in state '{currentStateName}'.");
         }
         
-        private void ChangeState(string toState)
+        private void ChangeState(string toState, IStateChangeParams stateChangeParams = null)
         {
             var nextState = GetState(toState);
             if (nextState == null)
@@ -247,7 +254,7 @@ namespace Cyl.StateMachines
 
             CurrentState?.OnExit();
             CurrentState = nextState;
-            CurrentState.OnEnter();
+            CurrentState.OnEnter(stateChangeParams);
         }
         
         private void Update()
